@@ -13,7 +13,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-RES = Path(__file__).resolve().parents[1] / "resultados"
+RES = Path.cwd() / "resultados"  # se corre desde la carpeta de trabajo (repo o Drive)
 VENTANA = 20
 COLORES = ["#1f5f8b", "#b5541c", "#3a7d44", "#7a3e9d"]
 
