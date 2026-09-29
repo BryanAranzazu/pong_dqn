@@ -148,7 +148,41 @@ Aquí se **entrena sin acciones pegajosas** (0,0), como en el DQN original, y se
 
 ## 3. Flujo de entrenamiento
 
-Diagrama del ciclo: carpeta `esquemas/`.
+El ciclo tiene dos bucles que se encuentran en el replay buffer: el de **interacción**, que
+juega y guarda experiencia, y el de **aprendizaje**, que toma lotes al azar de esa experiencia
+y ajusta la red.
+
+```mermaid
+flowchart LR
+    subgraph INT["Interacción con Pong (cada paso)"]
+        direction TB
+        OBS["Observación<br/>4 cuadros 84×84 uint8"] --> EPS{"ε-greedy<br/>ε: 1,0 → 0,01"}
+        EPS -- "prob. ε" --> AZAR["Acción al azar<br/>(6 posibles)"]
+        EPS -- "prob. 1 − ε" --> ARGMAX["argmax_a Q(s, a)<br/>red en línea"]
+        AZAR --> STEP["env.step(a)"]
+        ARGMAX --> STEP
+        STEP --> TRANS["r, s′, terminated"]
+        TRANS --> OBS
+    end
+
+    TRANS -- "guardar solo el cuadro nuevo" --> BUF[("Replay buffer<br/>100.000 transiciones")]
+
+    subgraph APR["Aprendizaje (desde el paso 10.000, cada paso)"]
+        direction TB
+        LOTE["Lote de 32 al azar<br/>se reconstruyen s y s′"] --> PRED["Q(s, a)<br/>red en línea"]
+        LOTE --> OBJ["y = r + γ · max Q_obj(s′, a′) · (1 − terminated)<br/>red objetivo, γ = 0,99"]
+        PRED --> LOSS["Pérdida de Huber<br/>entre Q(s, a) e y"]
+        OBJ --> LOSS
+        LOSS --> ADAM["Adam, lr 1e-4<br/>recorte de gradiente a 10"]
+    end
+
+    BUF --> LOTE
+    ADAM -- "actualiza pesos" --> ARGMAX
+    ADAM -. "copia cada 1.000 pasos" .-> OBJ
+```
+
+El mismo ciclo, paso a paso:
+
 
 ```
 inicializar Q (red en línea) y Q_obj (copia), buffer vacío
@@ -359,12 +393,11 @@ src/pong_dqn/cli.py       pong-dqn inspeccionar | entrenar | evaluar | benchmark
 scripts/graficar.py       curva de entrenamiento y evaluaciones
 scripts/grabar_gif.py     GIF de una partida junto a lo que ve la red
 tests/                    buffer, red y agente
-esquemas/                 diagrama del ciclo DQN dibujado a mano
 ```
 
 ## 11. Declaración de uso de IA
 
-Como equipo, utilizamos asistentes de IA como apoyo para la estructuración y programación de la solución, la ejecución y automatización de pruebas, la elaboración de scripts de medición y gráficos, la organización del repositorio y la redacción de la documentación técnica. Revisamos el código, verificamos las métricas contra los registros en `resultados/` y asumimos la responsabilidad colectiva sobre el contenido y las conclusiones presentadas. `PENDIENTE`: frase sobre el esquema de la sección 3, solo si efectivamente se dibuja a mano.
+Como equipo, utilizamos asistentes de IA como apoyo para la estructuración y programación de la solución, la ejecución y automatización de pruebas, la elaboración de scripts de medición y gráficos, la organización del repositorio y la redacción de la documentación técnica. Revisamos el código, verificamos las métricas contra los registros en `resultados/` y asumimos la responsabilidad colectiva sobre el contenido y las conclusiones presentadas. El diagrama de la sección 3 se generó en Mermaid con ayuda de estas herramientas y lo revisamos contra el código de `src/pong_dqn/`.
 
 ## 12. Licencia
 
