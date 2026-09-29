@@ -1,15 +1,20 @@
-# Taller 2: resolver Pong (Atari) con Deep Q-Network desde píxeles
+# Pong con Deep Q-Network desde píxeles
 
-Maestría en Inteligencia Artificial, Universidad de La Sabana.
-Curso *Simulación y Aprendizaje por Refuerzo* (EFMIA-SAPR20265).
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](.python-version)
+[![Licencia Apache 2.0](https://img.shields.io/badge/licencia-Apache%202.0-green.svg)](LICENSE)
+[![Citar este trabajo](https://img.shields.io/badge/citar-CITATION.cff-orange.svg)](CITATION.cff)
+
+**Aprender a jugar viendo solo la pantalla.** Taller 2 de la Unidad 3, curso Simulación y Aprendizaje por Refuerzo, Maestría en Inteligencia Artificial, Universidad de La Sabana (Chía, Colombia), periodo 2026-2.
+
+Autores: Leonar Socarrás Molina (leonarsomo@unisabana.edu.co), John Jairo Serrano Cifuentes (johnseci@unisabana.edu.co), Brezhnev Joya Miranda (brezhnevjomi@unisabana.edu.co), Gabriel Alonso Lizano Alvarado (gabriellial@unisabana.edu.co), Bryan Johann Aranzazu Medina (bryanarme@unisabana.edu.co), ORCID [0000-0003-0601-9151](https://orcid.org/0000-0003-0601-9151). Docente: Emilio Muñoz Pérez.
 
 > **BORRADOR.** Las secciones 5, 6 y la parte final de la 7 se completan con los
 > números del entrenamiento. Todo lo marcado como `PENDIENTE` debe desaparecer
 > antes de entregar.
 
-Este repositorio entrena un agente **Deep Q-Network** que aprende a jugar **Pong**
-(`ALE/Pong-v5`) viendo solo la pantalla, con la arquitectura convolucional y el
-preprocesamiento de Mnih et al. (2015).
+## Resumen
+
+`PENDIENTE` (se escribe al final, con los resultados).
 
 ---
 
@@ -301,8 +306,11 @@ con las que entregó el entorno.
 
 ## 8. Antes de Pong: lo que se aprendió en LunarLander
 
-Antes de cambiar de ambiente se entrenó DQN y Double DQN en LunarLander-v3. Tres
-resultados de ese trabajo definieron cómo se evalúa aquí:
+En el Taller 1 ([leonarsomo/mountain_car](https://github.com/leonarsomo/mountain_car))
+vimos que entrenar de más degradaba la tabla de Q-Learning en vez de afinarla, y por eso
+separamos allí la evaluación final del entrenamiento. Antes de cambiar de ambiente en este
+taller entrenamos DQN y Double DQN en LunarLander-v3, y tres resultados de ese trabajo
+definieron cómo evaluamos aquí:
 
 1. **La recompensa de entrenamiento no sirve como criterio de parada.** El mejor
    modelo estuvo en el episodio 600 y no en el 800; con la curva de entrenamiento
@@ -353,7 +361,15 @@ tests/                    buffer, red y agente
 esquemas/                 diagrama del ciclo DQN dibujado a mano
 ```
 
-## 11. Referencias
+## 11. Declaración de uso de IA
+
+Como equipo, utilizamos asistentes de IA como apoyo para la estructuración y programación de la solución, la ejecución y automatización de pruebas, la elaboración de scripts de medición y gráficos, la organización del repositorio y la redacción de la documentación técnica. Revisamos el código, verificamos las métricas contra los registros en `resultados/` y asumimos la responsabilidad colectiva sobre el contenido y las conclusiones presentadas. `PENDIENTE`: frase sobre el esquema de la sección 3, solo si efectivamente se dibuja a mano.
+
+## 12. Licencia
+
+Apache 2.0 (ver `LICENSE`), igual que el Taller 1.
+
+## Referencias
 
 - Machado, M. C., Bellemare, M. G., Talvitie, E., Veness, J., Hausknecht, M., y
   Bowling, M. (2018). Revisiting the Arcade Learning Environment: Evaluation

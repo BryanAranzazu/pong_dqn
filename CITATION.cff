@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "Si usa este repositorio, por favor cítelo con estos metadatos."
+title: "Pong con Deep Q-Network desde píxeles"
+type: software
+authors:
+  - family-names: "Socarrás Molina"
+    given-names: "Leonar"
+    affiliation: "Maestría en Inteligencia Artificial, Universidad de La Sabana"
+    email: "leonarsomo@unisabana.edu.co"
+    orcid: "https://orcid.org/0000-0003-0601-9151"
+  - family-names: "Serrano Cifuentes"
+    given-names: "John Jairo"
+    affiliation: "Maestría en Inteligencia Artificial, Universidad de La Sabana"
+    email: "johnseci@unisabana.edu.co"
+  - family-names: "Joya Miranda"
+    given-names: "Brezhnev"
+    affiliation: "Maestría en Inteligencia Artificial, Universidad de La Sabana"
+    email: "brezhnevjomi@unisabana.edu.co"
+  - family-names: "Lizano Alvarado"
+    given-names: "Gabriel Alonso"
+    affiliation: "Maestría en Inteligencia Artificial, Universidad de La Sabana"
+    email: "gabriellial@unisabana.edu.co"
+  - family-names: "Aranzazu Medina"
+    given-names: "Bryan Johann"
+    affiliation: "Maestría en Inteligencia Artificial, Universidad de La Sabana"
+    email: "bryanarme@unisabana.edu.co"
+abstract: >-
+  Agente Deep Q-Network que aprende a jugar Pong (ALE/Pong-v5) a partir de la pantalla,
+  con el preprocesamiento y la red convolucional de Mnih et al. (2015), un replay buffer
+  que guarda cada cuadro una sola vez y evaluación con política congelada y semillas fijas.
+keywords:
+  - aprendizaje por refuerzo
+  - deep Q-network
+  - Atari
+  - Pong
+  - red convolucional
+  - reproducibilidad
+license: Apache-2.0
+version: "0.1.0"

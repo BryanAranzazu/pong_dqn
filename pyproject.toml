@@ -3,6 +3,14 @@ name = "pong-dqn"
 version = "0.1.0"
 description = "Taller 2: resolver Pong (Atari) con Deep Q-Network a partir de pixeles"
 readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Leonar Socarrás Molina", email = "leonarsomo@unisabana.edu.co" },
+    { name = "John Jairo Serrano Cifuentes", email = "johnseci@unisabana.edu.co" },
+    { name = "Brezhnev Joya Miranda", email = "brezhnevjomi@unisabana.edu.co" },
+    { name = "Gabriel Alonso Lizano Alvarado", email = "gabriellial@unisabana.edu.co" },
+    { name = "Bryan Johann Aranzazu Medina", email = "bryanarme@unisabana.edu.co" },
+]
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "gymnasium[atari]>=1.2.3",
