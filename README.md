@@ -154,31 +154,27 @@ y ajusta la red.
 
 ```mermaid
 flowchart LR
-    subgraph INT["Interacción con Pong (cada paso)"]
+    subgraph INT["1 · Interacción con Pong, cada paso"]
         direction TB
-        OBS["Observación<br/>4 cuadros 84×84 uint8"] --> EPS{"ε-greedy<br/>ε: 1,0 → 0,01"}
-        EPS -- "prob. ε" --> AZAR["Acción al azar<br/>(6 posibles)"]
+        OBS["Observación s<br/>4 cuadros 84×84 uint8"] --> EPS{"ε-greedy<br/>ε de 1,0 a 0,01"}
+        EPS -- "prob. ε" --> AZAR["acción al azar<br/>entre las 6"]
         EPS -- "prob. 1 − ε" --> ARGMAX["argmax_a Q(s, a)<br/>red en línea"]
-        AZAR --> STEP["env.step(a)"]
+        AZAR --> STEP["env.step(a)<br/>devuelve r, s′, terminated"]
         ARGMAX --> STEP
-        STEP --> TRANS["r, s′, terminated"]
-        TRANS --> OBS
+        STEP -. "s ← s′, siguiente paso" .-> OBS
     end
 
-    TRANS -- "guardar solo el cuadro nuevo" --> BUF[("Replay buffer<br/>100.000 transiciones")]
+    INT -- "guarda el cuadro nuevo<br/>y (a, r, terminated)" --> BUF[("Replay buffer<br/>100.000 transiciones")]
+    BUF -- "lote de 32 al azar;<br/>se reconstruyen s y s′" --> APR
 
-    subgraph APR["Aprendizaje (desde el paso 10.000, cada paso)"]
+    subgraph APR["2 · Aprendizaje, desde el paso 10.000"]
         direction TB
-        LOTE["Lote de 32 al azar<br/>se reconstruyen s y s′"] --> PRED["Q(s, a)<br/>red en línea"]
-        LOTE --> OBJ["y = r + γ · max Q_obj(s′, a′) · (1 − terminated)<br/>red objetivo, γ = 0,99"]
-        PRED --> LOSS["Pérdida de Huber<br/>entre Q(s, a) e y"]
-        OBJ --> LOSS
-        LOSS --> ADAM["Adam, lr 1e-4<br/>recorte de gradiente a 10"]
+        PRED["predicción<br/>Q(s, a), red en línea"] --> LOSS["pérdida de Huber<br/>Adam lr 1e-4, recorte a 10"]
+        OBJ["objetivo de Bellman<br/>y = r + γ · max Q_obj(s′, a′) · (1 − terminated)"] --> LOSS
+        LOSS -. "cada 1.000 pasos se copia<br/>la red en línea a la red objetivo" .-> OBJ
     end
 
-    BUF --> LOTE
-    ADAM -- "actualiza pesos" --> ARGMAX
-    ADAM -. "copia cada 1.000 pasos" .-> OBJ
+    APR -- "pesos actualizados de la red en línea" --> INT
 ```
 
 El mismo ciclo, paso a paso:
