@@ -20,6 +20,9 @@ dependencies = [
     "matplotlib>=3.8",
 ]
 
+[project.urls]
+Repository = "https://github.com/glizano/pong_dqn"
+
 [project.scripts]
 pong-dqn = "pong_dqn.cli:main"
 

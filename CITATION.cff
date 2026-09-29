@@ -35,5 +35,7 @@ keywords:
   - Pong
   - red convolucional
   - reproducibilidad
+repository-code: "https://github.com/glizano/pong_dqn"
+url: "https://github.com/glizano/pong_dqn"
 license: Apache-2.0
 version: "0.1.0"
