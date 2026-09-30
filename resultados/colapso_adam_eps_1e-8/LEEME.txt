@@ -1,0 +1,3 @@
+Corrida del 29 sep en el Mac (MPS), 1.000.000 de pasos, Adam con eps por defecto (1e-8).
+La red colapso antes del paso 50.000: 0 de 3.136 unidades de conv3 activas, Q constante.
+Evaluacion -21,00 en los 20 puntos de control. Se conserva como evidencia (README, seccion 7).

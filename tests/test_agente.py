@@ -40,3 +40,11 @@ def test_guardar_y_cargar(tmp_path):
     ag2 = AgenteDQN.cargar(tmp_path / "m.pt", "cpu")
     assert (ag2.pasos, ag2.episodios) == (123, 4)
     np.testing.assert_allclose(ag.valores_q(obs), ag2.valores_q(obs), rtol=1e-6)
+
+
+def test_adam_eps_y_salud():
+    ag = AgenteDQN(6, Hiper(), "cpu")
+    assert ag.opt.param_groups[0]["eps"] == 1.5e-4
+    estados = np.random.randint(0, 256, (16, 4, 84, 84), dtype=np.uint8)
+    s = ag.salud(estados)
+    assert 0.0 < s["conv3_vivas"] <= 1.0 and s["q_std_estados"] >= 0.0

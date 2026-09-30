@@ -80,7 +80,21 @@ def entrenar(
                       ["paso", "episodio", "recompensa", "longitud", "epsilon", "perdida_media",
                        "pasos_por_seg"])
     f_ev, w_ev = _csv(f_ev_path, ["paso", "episodio", "media", "desv", "min", "max", "ganados",
-                                  "n", "pasos_medios", "segundos"])
+                                  "n", "pasos_medios", "segundos", "conv3_vivas",
+                                  "q_std_estados"])
+
+    # Estados fijos para vigilar si la red colapsa (misma muestra en toda la corrida).
+    env_diag = crear_entorno()
+    o, _ = env_diag.reset(seed=12_345)
+    estados_diag = []
+    for t in range(2_000):
+        o, _, te, tr, _ = env_diag.step(env_diag.action_space.sample())
+        if t % 8 == 0:
+            estados_diag.append(o)
+        if te or tr:
+            o, _ = env_diag.reset()
+    env_diag.close()
+    estados_diag = np.stack(estados_diag)
 
     print(f"Dispositivo: {agente.dev} | acciones: {n_acc} | "
           f"parametros: {sum(p.numel() for p in agente.q.parameters()):,}")
@@ -135,9 +149,11 @@ def entrenar(
                 te = time.time()
                 m = evaluar(agente, n_eval)
                 seg = time.time() - te
+                sal = agente.salud(estados_diag)
                 w_ev.writerow([agente.pasos, agente.episodios, m["media"], round(m["desv"], 3),
                                m["min"], m["max"], m["ganados"], m["n"],
-                               round(m["pasos_medios"], 1), round(seg, 1)])
+                               round(m["pasos_medios"], 1), round(seg, 1),
+                               round(sal["conv3_vivas"], 4), round(sal["q_std_estados"], 6)])
                 f_ev.flush()
                 marca = ""
                 if m["media"] > mejor:
@@ -147,6 +163,11 @@ def entrenar(
                 print(f"== EVALUACION paso {agente.pasos:,}: {m['media']:+.2f} +/- "
                       f"{m['desv']:.2f} | ganados {m['ganados']}/{m['n']} ({seg:.0f} s){marca}",
                       flush=True)
+                print(f"   salud de la red: conv3 vivas {sal['conv3_vivas']:.1%} | "
+                      f"variacion de Q entre estados {sal['q_std_estados']:.5f}", flush=True)
+                if sal["conv3_vivas"] < 0.02 or sal["q_std_estados"] < 1e-5:
+                    print("   ALERTA: la red parece colapsada (salida casi constante). "
+                          "Conviene detener y revisar.", flush=True)
 
             if agente.pasos % guardar_cada == 0:
                 agente.guardar(ultimo)

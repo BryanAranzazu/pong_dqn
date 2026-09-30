@@ -43,7 +43,7 @@ def cmd_entrenar(a) -> None:
     from pong_dqn.entrenar import entrenar
 
     hp = Hiper(doble=a.doble, aprender_cada=a.aprender_cada, lr=a.lr, eps_pasos=a.eps_pasos,
-               capacidad=a.capacidad)
+               capacidad=a.capacidad, adam_eps=a.adam_eps)
     entrenar(a.pasos, etiqueta=a.etiqueta, hp=hp, dispositivo=a.dispositivo, semilla=a.semilla,
              eval_cada=a.eval_cada, n_eval=a.n_eval, reanudar=a.reanudar)
 
@@ -112,6 +112,7 @@ def main() -> None:
     e.add_argument("--lr", type=float, default=1e-4)
     e.add_argument("--eps-pasos", type=int, default=250_000)
     e.add_argument("--capacidad", type=int, default=100_000)
+    e.add_argument("--adam-eps", type=float, default=1.5e-4)
     e.add_argument("--eval-cada", type=int, default=50_000)
     e.add_argument("--n-eval", type=int, default=10)
     e.add_argument("--semilla", type=int, default=0)

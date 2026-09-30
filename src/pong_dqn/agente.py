@@ -36,6 +36,12 @@ class Hiper:
     eps_pasos: int = 250_000          # decaimiento lineal de eps_inicio a eps_fin
     doble: bool = False
     clip_grad: float = 10.0
+    # eps de Adam. El valor por defecto de PyTorch (1e-8) hace que Adam normalice
+    # gradientes diminutos a pasos de tamano ~lr en direcciones de ruido; en Pong,
+    # donde casi todos los lotes tienen recompensa 0, eso mato todas las unidades
+    # de la tercera convolucion en menos de 50.000 pasos (ver README, seccion 7).
+    # 1.5e-4 es el valor de Rainbow (Hessel et al., 2018).
+    adam_eps: float = 1.5e-4
 
 
 class AgenteDQN:
@@ -47,7 +53,7 @@ class AgenteDQN:
         self.q_obj = QNetworkCNN(n_acciones).to(self.dev)
         self.q_obj.load_state_dict(self.q.state_dict())
         self.q_obj.eval()
-        self.opt = optim.Adam(self.q.parameters(), lr=self.hp.lr)
+        self.opt = optim.Adam(self.q.parameters(), lr=self.hp.lr, eps=self.hp.adam_eps)
         self.perdida = nn.SmoothL1Loss()
         self.pasos = 0      # pasos de entorno acumulados
         self.episodios = 0
@@ -102,6 +108,21 @@ class AgenteDQN:
         nn.utils.clip_grad_norm_(self.q.parameters(), self.hp.clip_grad)
         self.opt.step()
         return float(loss.item())
+
+    @torch.no_grad()
+    def salud(self, estados: np.ndarray) -> dict:
+        """Diagnostico de colapso: unidades vivas de conv3 y cuanto varia Q entre estados.
+
+        Si ninguna unidad de la ultima convolucion se activa para ningun estado, la red
+        devuelve la misma salida para toda entrada: ya no ve el juego.
+        """
+        x = torch.as_tensor(estados, device=self.dev).float() / 255.0
+        h = self.q.convs(x)
+        q = self.q.cabeza(h)
+        return {
+            "conv3_vivas": float((h > 0).any(dim=0).float().mean().item()),
+            "q_std_estados": float(q.std(dim=0).mean().item()),
+        }
 
     def sincronizar(self) -> None:
         self.q_obj.load_state_dict(self.q.state_dict())
