@@ -3,6 +3,7 @@
 [![CI](https://github.com/glizano/pong_dqn/actions/workflows/ci.yml/badge.svg)](https://github.com/glizano/pong_dqn/actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](.python-version)
 [![Licencia Apache 2.0](https://img.shields.io/badge/licencia-Apache%202.0-green.svg)](LICENSE)
+[![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/glizano/pong_dqn/blob/main/notebooks/entrenar_colab.ipynb)
 [![Citar este trabajo](https://img.shields.io/badge/citar-CITATION.cff-orange.svg)](CITATION.cff)
 
 **Aprender a jugar viendo solo la pantalla.** Taller 2 de la Unidad 3, curso Simulación y Aprendizaje por Refuerzo, Maestría en Inteligencia Artificial, Universidad de La Sabana (Chía, Colombia), periodo 2026-2.
@@ -27,6 +28,23 @@ a 1,5e-4, el valor de Rainbow, lo resolvió.
 
 > La segunda corrida (semilla 0, en un Mac) sigue entrenando; sus resultados se agregan
 > a la sección 5 al terminar.
+
+## Probarlo en Google Colab, sin instalar nada
+
+[![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/glizano/pong_dqn/blob/main/notebooks/entrenar_colab.ipynb)
+
+1. Abrir el notebook con el botón de arriba (hace falta una cuenta de Google).
+2. **Entorno de ejecución → Cambiar tipo de entorno de ejecución → GPU T4** (gratuita).
+3. Elegir una de las dos opciones:
+
+| para | celdas | tiempo | necesita Drive |
+|---|---|---|---|
+| **ver jugar al agente ya entrenado** (evaluación en 10 partidos y GIF) | 1 y A | unos 3 minutos | no |
+| **entrenar desde cero** y reproducir los resultados | 1 a 5 | unas 2 horas | sí, ahí guarda resultados y pesos |
+
+Si Colab se desconecta durante el entrenamiento, basta con volver a correr las celdas 1
+y 2 y la de entrenamiento agregando `--reanudar`: retoma desde el último punto de
+control guardado en Drive. El detalle de cada comando está en la sección 9.
 
 ---
 
@@ -506,8 +524,8 @@ uv run python scripts/graficar.py colapso_adam_eps_1e-8 dqn_v2
 uv run python scripts/grabar_gif.py --modelo saves/dqn_v2/mejor.pt
 ```
 
-En Google Colab con GPU: `notebooks/entrenar_colab.ipynb` (guarda los resultados en
-Google Drive y permite retomar si la sesión se cae).
+En Google Colab con GPU: [`notebooks/entrenar_colab.ipynb`](https://colab.research.google.com/github/glizano/pong_dqn/blob/main/notebooks/entrenar_colab.ipynb) (ver "Probarlo en
+Google Colab" al inicio).
 
 ## 10. Estructura
 
