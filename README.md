@@ -9,13 +9,24 @@
 
 Autores: Leonar Socarrás Molina (leonarsomo@unisabana.edu.co), John Jairo Serrano Cifuentes (johnseci@unisabana.edu.co), Brezhnev Joya Miranda (brezhnevjomi@unisabana.edu.co), Gabriel Alonso Lizano Alvarado (gabriellial@unisabana.edu.co), Bryan Johann Aranzazu Medina (bryanarme@unisabana.edu.co), ORCID [0000-0003-0601-9151](https://orcid.org/0000-0003-0601-9151). Docente: Emilio Muñoz Pérez.
 
-> **BORRADOR.** Las secciones 5, 6 y la parte final de la 7 se completan con los
-> números del entrenamiento. Todo lo marcado como `PENDIENTE` debe desaparecer
-> antes de entregar.
+![El agente (paleta verde, derecha) jugando Pong, junto a los 4 cuadros que ve la red](resultados/partida.gif)
 
 ## Resumen
 
-`PENDIENTE` (se escribe al final, con los resultados).
+Entrenamos un agente Deep Q-Network que aprende a jugar Pong (`ALE/Pong-v5`) viendo solo
+la pantalla, con el preprocesamiento y la red convolucional de Mnih et al. (2015). Tras
+1.000.000 de pasos de entrenamiento (unas dos horas en una GPU T4), el mejor modelo gana
+los 30 partidos de la evaluación final **21 a 0**, frente a −20,27 de un agente aleatorio.
+Con acciones pegajosas, que rompen el determinismo del emulador, sigue ganando los 30
+partidos pero con **+10,5** de media: buena parte de su puntuación perfecta viene de una
+jugada repetible que anota cada 78 pasos y que depende de que el emulador sea
+determinista. El hallazgo que más nos costó fue un colapso silencioso: con el `eps` por
+defecto de Adam en PyTorch (1e-8), la tercera convolución quedó sin ninguna unidad
+activa antes del paso 50.000 y la red devolvía el mismo valor para toda pantalla. Subirlo
+a 1,5e-4, el valor de Rainbow, lo resolvió.
+
+> La segunda corrida (semilla 0, en un Mac) sigue entrenando; sus resultados se agregan
+> a la sección 5 al terminar.
 
 ---
 
@@ -27,7 +38,7 @@ de referencia, así que ese quedó descartado. El profesor sugirió los juegos d
 para quien quisiera un reto mayor, porque obligan a trabajar con una red
 convolucional.
 
-Pong cumple eso y además tiene tres propiedades útiles para el taller:
+Elegimos Pong porque cumple eso y además tiene tres propiedades útiles para el taller:
 
 - **La observación es una imagen.** Hay que decidir cómo preprocesarla, y la
   decisión de apilar cuadros deja de ser opcional (sección 2.3).
@@ -41,7 +52,7 @@ Pong cumple eso y además tiene tres propiedades útiles para el taller:
 
 ## 2. Acciones y observaciones
 
-Todo lo que sigue se obtuvo del propio entorno con `pong-dqn inspeccionar`.
+Todo lo que sigue lo obtuvimos del propio entorno con `pong-dqn inspeccionar`.
 
 ### 2.1 Observación del emulador (antes del preprocesamiento)
 
@@ -100,12 +111,13 @@ no están en ningún lado excepto en la diferencia entre cuadros.
 | 4 | RIGHTFIRE | igual que RIGHT |
 | 5 | LEFTFIRE | igual que LEFT |
 
-Hay **tres efectos distintos repartidos en seis acciones**. Se comprobó
+Hay **tres efectos distintos repartidos en seis acciones**. Lo comprobamos
 directamente: con la misma semilla, 200 pasos de FIRE producen exactamente los mismos
-cuadros que 200 de NOOP, y lo mismo RIGHTFIRE frente a RIGHT. Se dejan las seis porque
+cuadros que 200 de NOOP, y lo mismo RIGHTFIRE frente a RIGHT. Dejamos las seis porque
 es el conjunto mínimo que expone el entorno por defecto, y porque la redundancia es
 en sí una prueba: si el agente aprende bien, los valores Q de las acciones
-equivalentes deberían converger a valores parecidos.
+equivalentes deberían quedar más cerca entre sí que los de acciones distintas. Así
+fue (sección 6).
 
 ### 2.5 Recompensas
 
@@ -141,8 +153,8 @@ Bellman siga haciendo bootstrap cuando el episodio se corta por tiempo.
 `ALE/Pong-v5` trae por defecto `repeat_action_probability = 0.25`: con probabilidad
 1/4 el emulador ignora la acción elegida y repite la anterior (Machado et al., 2018).
 Esto se introdujo para que un agente no pueda explotar el determinismo del emulador.
-Aquí se **entrena sin acciones pegajosas** (0,0), como en el DQN original, y se
-**evalúa con ambos valores** para medir si la política depende de ese determinismo.
+Aquí **entrenamos sin acciones pegajosas** (0,0), como en el DQN original, y
+**evaluamos con ambos valores** para medir si la política depende de ese determinismo.
 
 ---
 
@@ -192,11 +204,13 @@ repetir hasta 1.000.000 de pasos:
   ├─ 4. APRENDER (desde el paso 10.000, en cada paso):
   │     muestrear 32 transiciones; reconstruir s y s' como pilas de 4 cuadros
   │     y = r + γ · max_a' Q_obj(s')[a'] · (1 − terminated)       ← Bellman
-  │     pérdida de Huber entre Q(s)[a] e y; recorte de gradiente a norma 10; Adam
+  │     pérdida de Huber entre Q(s)[a] e y; recorte de gradiente a norma 10;
+  │     Adam con lr 1e-4 y eps 1,5e-4
   ├─ 5. SINCRONIZAR: cada 1.000 pasos, Q_obj ← Q
   ├─ 6. FIN DE EPISODIO: registrar recompensa, reset(), marcar inicio en el buffer
   └─ 7. EVALUAR cada 50.000 pasos: 10 partidos con ε = 0 y semillas fijas;
-        si la media supera la mejor anterior, guardar saves/dqn/mejor.pt
+        si la media supera la mejor anterior, guardar saves/<etiqueta>/mejor.pt;
+        revisar además la salud de la red (unidades vivas de conv3, variación de Q)
 ```
 
 ### 3.1 Los componentes del ciclo DQN
@@ -242,9 +256,15 @@ lotes no salgan de un buffer con tres jugadas.
 **d) La red objetivo se sincroniza por pasos.** Por la misma razón que ε decae por
 pasos: la longitud del episodio no es constante.
 
-**e) Se evalúa aparte y se guarda el mejor por evaluación.** La recompensa de
+**e) Evaluamos aparte y guardamos el mejor por evaluación.** La recompensa de
 entrenamiento mezcla la calidad de la política con el nivel de exploración. El
-modelo que se reporta es el de mejor evaluación con política congelada, no el último.
+modelo que reportamos es el de mejor evaluación con política congelada, no el último.
+
+**f) Gradientes diminutos y Adam.** En casi todos los lotes la recompensa es 0, así que
+los gradientes son muy pequeños. Adam divide cada gradiente por una estimación de su
+magnitud más `eps`; con el `eps` por defecto (1e-8) esa división convierte gradientes
+casi nulos en pasos de tamaño completo en direcciones de ruido. Usamos 1,5e-4, el valor
+de Rainbow (Hessel et al., 2018). La sección 7 cuenta cómo lo descubrimos.
 
 ---
 
@@ -290,6 +310,7 @@ Tamaño de salida de cada convolución sin relleno: `(L − k) / s + 1`, que da
 | hiperparámetro | valor | razón |
 |---|---|---|
 | optimizador | Adam, lr = 1e-4 | el valor de la implementación de referencia de Pong en Lapan (2020); la red es 90 veces más grande que la de LunarLander y un paso grande mueve demasiados pesos a la vez |
+| `eps` de Adam | 1,5e-4 | con 1e-8 la red colapsó (sección 7); 1,5e-4 es el de Rainbow (Hessel et al., 2018) |
 | γ | 0,99 | horizonte de ~100 pasos, suficiente para ligar la jugada con el punto |
 | tamaño de lote | 32 | el de Mnih et al. (2015) |
 | capacidad del buffer | 100.000 | 700 MB con el buffer por cuadros; entre 40 y 100 partidos de historia según lo que duren |
@@ -305,23 +326,129 @@ Tamaño de salida de cada convolución sin relleno: `(L − k) / s + 1`, que da
 
 ## 5. Resultados
 
-`PENDIENTE`: curva de entrenamiento, tabla de evaluaciones por punto de control,
-evaluación final con 30 partidos con y sin acciones pegajosas, GIF de una partida.
+### 5.1 Curvas
+
+![Curvas de entrenamiento y evaluación: la corrida colapsada queda en −21; la corregida sube a +21](resultados/curva_colapso_adam_eps_1e-8_dqn_v2.png)
+
+Izquierda: recompensa por episodio durante el entrenamiento (con exploración), media
+móvil de 20 episodios. Derecha: evaluación cada 50.000 pasos, 10 partidos con la
+política congelada y semillas fijas. En azul, la primera corrida, con el `eps` de Adam
+por defecto (sección 7); en naranja, la corrida con la corrección (semilla 1, GPU T4).
+
+### 5.2 Evolución
+
+| pasos | evaluación (10 partidos) | ganados | lo que pasa |
+|---|---|---|---|
+| 50.000 | −20,40 ± 0,80 | 0/10 | devuelve la pelota de vez en cuando |
+| 100.000 | −17,20 ± 2,32 | 0/10 | |
+| 150.000 | −14,60 ± 4,27 | 0/10 | |
+| 200.000 | −11,80 ± 4,07 | 0/10 | |
+| 250.000 | −9,80 ± 6,79 | 0/10 | ε llega a su mínimo (0,01) |
+| 300.000 | **+18,20 ± 1,89** | **10/10** | |
+| 350.000 | +20,20 ± 0,75 | 10/10 | |
+| 400.000 a 750.000 | entre +19,40 y +20,80 | 10/10 | |
+| **800.000** | **+21,00 ± 0,00** | **10/10** | mejor modelo (el que reportamos) |
+| 1.000.000 | +21,00 ± 0,00 | 10/10 | |
+
+En el entrenamiento, el primer partido ganado llegó en el episodio 182 (paso 242.663) y
+la media móvil de 20 episodios cruzó el cero en el paso 272.492. Después del paso
+400.000 el agente no perdió ninguno de sus 343 partidos de entrenamiento (media +19,97,
+mínimo +15). Los partidos pasaron de durar 917 pasos en promedio (los primeros 50) a
+1.726 (los últimos 50), porque el agente dejó de perder los puntos de inmediato.
+
+### 5.3 Evaluación final
+
+Mejor modelo (paso 800.000), 30 partidos con semillas fijas y ε = 0:
+
+| emulador | recompensa media | mín | máx | ganados | pasos por partido |
+|---|---|---|---|---|---|
+| determinista (`sticky` = 0) | **+21,00 ± 0,00** | +21 | +21 | **30/30** | 1.658 |
+| acciones pegajosas (`sticky` = 0,25) | **+10,50 ± 3,66** | +4 | +17 | **30/30** | 2.569 |
+| agente aleatorio | −20,27 ± 0,85 | −21 | −18 | 0/30 | 948 |
+
+Los registros completos están en `resultados/dqn_v2/` (`episodios.csv`,
+`evaluaciones.csv`, `final_sticky0.json`, `final_sticky025.json`) y el modelo en
+`saves/dqn_v2/mejor.pt`.
+
+### 5.4 Salud de la red
+
+| corrida | unidades de conv3 activas | variación de Q entre pantallas | resultado |
+|---|---|---|---|
+| `eps` = 1e-8 | 0 de 3.136 (0 %) desde antes del paso 50.000 | 0 (salida constante) | −21 en las 20 evaluaciones |
+| `eps` = 1,5e-4 | entre 88 % y 97 % en toda la corrida | entre 0,30 y 0,48 | +21 |
 
 ---
 
 ## 6. Reflexión sobre los resultados
 
-`PENDIENTE`.
+**El salto entre los pasos 250.000 y 300.000 coincide con el fin de la exploración.**
+La evaluación pasa de −9,8 a +18,2 en 50.000 pasos, justo después de que ε llega a su
+mínimo (en el paso 200.000 una de cada cinco acciones todavía era al azar). La evaluación
+usa siempre ε = 0, así que lo que mejoró fue la red y no solo la forma de medirla.
+Nuestra lectura es que mientras el agente explora mucho, el buffer tiene pocos puntos
+ganados, porque una acción al azar en mitad de un intercambio suele costar el punto. Al
+bajar ε, el agente empieza a encadenar intercambios completos, el buffer se llena de
+puntos a favor y el objetivo de Bellman propaga ese valor hacia atrás. La curva de
+entrenamiento lo muestra: el primer partido ganado llega en el paso 242.663 y desde ahí
+la mejora es muy rápida.
+
+**Un 21 a 0 perfecto es una señal de alerta, no solo un logro.** Con el emulador
+determinista el agente gana cada partido 21 a 0, y anota exactamente cada 78 pasos (lo
+medimos en un partido completo: 77 o 78 pasos entre un punto y el siguiente, los 21
+puntos). Encontró una jugada que, devuelta desde el mismo lugar, el rival no alcanza
+nunca. Eso es legítimo dentro de las reglas, pero depende de que el emulador repita
+exactamente lo mismo. Con acciones pegajosas la misma red baja a +10,5 y sus partidos
+duran 2.569 pasos en vez de 1.658: ya no puede encadenar la jugada y tiene que defender
+de verdad. Sigue ganando los 30, así que aprendió a jugar, pero cerca de la mitad de su
+margen venía de explotar el determinismo. Es exactamente la crítica de Machado et al.
+(2018) a la evaluación de agentes en Atari sin estocasticidad.
+
+**Las acciones redundantes quedaron con valores parecidos.** En un partido completo, la
+diferencia media de Q entre acciones con el mismo efecto (NOOP y FIRE, RIGHT y
+RIGHTFIRE, LEFT y LEFTFIRE) fue de 0,013 a 0,016, frente a 0,046 a 0,059 entre acciones
+con efectos distintos. La red descubrió sola que FIRE no hace nada en Pong. Como las
+diferencias son pequeñas, el agente alterna entre acciones equivalentes y usa las seis.
+
+**La red sobreestima sus propios valores en un 20 %.** En cinco partidos de evaluación,
+el Q medio de las acciones elegidas fue 1,48, mientras que el retorno descontado que el
+agente obtuvo realmente desde esos mismos estados fue 1,23. Es el sesgo optimista del
+`max` en el objetivo de Bellman que describen van Hasselt et al. (2016) y que Double DQN
+corrige. Aquí no impidió resolver el juego, porque lo que importa para actuar es el
+orden entre acciones y no su valor absoluto, pero sí muestra que los valores Q de DQN no
+se pueden leer como predicciones calibradas.
+
+**La limitación estructural es que el agente no ve la puntuación como estado.** El
+marcador está en la pantalla, pero la recompensa por punto es la misma con 0 a 0 que con
+20 a 0 y γ = 0,99 descuenta todo lo que pase a más de unos cientos de pasos. El agente
+optimiza el próximo punto, no el partido. En Pong eso basta porque ganar cada punto es
+ganar el partido; en un juego donde convenga sacrificar un punto para ganar el
+siguiente, este diseño de recompensa no lo capturaría.
 
 ---
 
 ## 7. Reflexión sobre lo que más costó
 
+**Un colapso que no lanzaba ningún error.** La primera corrida completa (1.000.000 de
+pasos, unas cinco horas en un Mac) y una segunda en Colab dieron −21,00 en las 20
+evaluaciones. El código corría, la pérdida no explotaba y no había ninguna excepción.
+Al abrir el modelo vimos que la red devolvía exactamente el mismo valor Q para
+cualquier pantalla: ninguna de las 3.136 unidades de la tercera convolución se activaba
+con ninguna entrada, y ya estaba así en el paso 50.000. La causa era el `eps` de Adam.
+Con recompensa 0 en casi todos los lotes, los gradientes son diminutos; Adam los divide
+por su propia magnitud más `eps`, y con 1e-8 eso los convierte en pasos de tamaño
+completo en direcciones de ruido que fueron apagando las unidades. Lo reprodujimos sin
+el juego, entrenando solo sobre un buffer fijo: con 1e-8 las unidades activas de conv3
+cayeron de unas 1.590 a 61 en 1.750 actualizaciones; con 1,5e-4 se mantuvieron entre
+1.400 y 1.760 durante 8.000. Lo que más costó no fue la corrección, que es un número,
+sino aceptar que una curva plana en −21 no decía nada de por qué y que había que mirar
+dentro de la red. Desde entonces cada evaluación imprime cuántas unidades siguen vivas
+y avisa si la red colapsa; los registros de aquella corrida están en
+`resultados/colapso_adam_eps_1e-8/`.
+
 **Cambiar de ambiente a mitad del taller.** El trabajo empezó en LunarLander. En la
 clase del 28 de septiembre ese mismo ambiente fue el ejemplo resuelto en vivo, lo
 que lo sacaba del requisito de "ambiente no trabajado en clase". Lo aprendido allí
-(sección 8) se trasladó, pero la red, el preprocesamiento y el buffer hubo que
+(sección 8) lo trasladamos, pero la red, el preprocesamiento y el buffer tuvimos que
 hacerlos de nuevo.
 
 **Diseñar el buffer por cuadros sin equivocarse.** Es la parte del código con más
@@ -331,7 +458,10 @@ leen un cuadro recién sobrescrito, y el agente simplemente aprende peor. La ún
 defensa fue una prueba que reconstruye cientos de pilas y las compara, píxel a píxel,
 con las que entregó el entorno.
 
-`PENDIENTE`: dificultades del entrenamiento largo.
+**El cómputo, y no por la razón esperada.** Sin GPU propia, un millón de pasos toma
+unas cinco horas en un Mac y dos en una T4 de Colab. El costo real no fue esperar, fue
+que el colapso solo se notó al final de esas horas. Por eso agregamos el diagnóstico de
+salud a cada evaluación: hoy el mismo error se vería en el paso 50.000.
 
 ---
 
@@ -362,19 +492,22 @@ política congelada, y la evaluación final usa 30 partidos.
 uv sync
 uv run pong-dqn inspeccionar     # espacios, dtype, recompensas y resumen de la red
 uv run pong-dqn benchmark        # estima cuánto tardará el entrenamiento en esta máquina
-uv run pytest -q                 # 7 pruebas, incluida la del buffer
+uv run pytest -q                 # 8 pruebas, incluida la del buffer
 
 # Entrenamiento (en macOS, caffeinate evita que el equipo se duerma)
-caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn
+caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn_v2 --semilla 1
 # Si se interrumpe, se retoma con:
-caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn --reanudar
+caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn_v2 --semilla 1 --reanudar
 
 # Evaluación final y gráficas
-uv run pong-dqn evaluar --modelo saves/dqn/mejor.pt --n 30
-uv run pong-dqn evaluar --modelo saves/dqn/mejor.pt --n 30 --sticky 0.25
-uv run python scripts/graficar.py dqn
-uv run python scripts/grabar_gif.py --modelo saves/dqn/mejor.pt
+uv run pong-dqn evaluar --modelo saves/dqn_v2/mejor.pt --n 30
+uv run pong-dqn evaluar --modelo saves/dqn_v2/mejor.pt --n 30 --sticky 0.25
+uv run python scripts/graficar.py colapso_adam_eps_1e-8 dqn_v2
+uv run python scripts/grabar_gif.py --modelo saves/dqn_v2/mejor.pt
 ```
+
+En Google Colab con GPU: `notebooks/entrenar_colab.ipynb` (guarda los resultados en
+Google Drive y permite retomar si la sesión se cae).
 
 ## 10. Estructura
 
@@ -389,6 +522,9 @@ src/pong_dqn/cli.py       pong-dqn inspeccionar | entrenar | evaluar | benchmark
 scripts/graficar.py       curva de entrenamiento y evaluaciones
 scripts/grabar_gif.py     GIF de una partida junto a lo que ve la red
 tests/                    buffer, red y agente
+notebooks/                entrenamiento en Google Colab
+resultados/               registros, evaluaciones finales, curvas y GIF
+saves/                    mejor modelo de cada corrida
 ```
 
 ## 11. Declaración de uso de IA
@@ -405,6 +541,10 @@ Apache 2.0 (ver `LICENSE`), igual que el Taller 1.
   Bowling, M. (2018). Revisiting the Arcade Learning Environment: Evaluation
   protocols and open problems for general agents. *Journal of Artificial Intelligence
   Research, 61*, 523-562. https://doi.org/10.1613/jair.5699
+- Hessel, M., Modayil, J., van Hasselt, H., Schaul, T., Ostrovski, G., Dabney, W.,
+  Horgan, D., Piot, B., Azar, M., y Silver, D. (2018). Rainbow: Combining improvements in
+  deep reinforcement learning. *Proceedings of the AAAI Conference on Artificial
+  Intelligence, 32*(1), 3215-3222. https://doi.org/10.1609/aaai.v32i1.11796
 - Lapan, M. (2020). *Deep reinforcement learning hands-on* (2.ª ed.). Packt.
 - Mnih, V., Kavukcuoglu, K., Silver, D., Graves, A., Antonoglou, I., Wierstra, D., y
   Riedmiller, M. (2013). *Playing Atari with deep reinforcement learning* [Preprint].
@@ -419,3 +559,6 @@ Apache 2.0 (ver `LICENSE`), igual que el Taller 1.
   Schulhoff, S., Tai, J. J., Tan, H., y Younis, O. G. (2024). *Gymnasium: A standard
   interface for reinforcement learning environments* [Preprint]. arXiv.
   https://doi.org/10.48550/arXiv.2407.17032
+- van Hasselt, H., Guez, A., y Silver, D. (2016). Deep reinforcement learning with double
+  Q-learning. *Proceedings of the AAAI Conference on Artificial Intelligence, 30*(1),
+  2094-2100. https://doi.org/10.1609/aaai.v30i1.10295
