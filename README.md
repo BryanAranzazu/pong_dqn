@@ -15,19 +15,16 @@ Autores: Leonar Socarrás Molina (leonarsomo@unisabana.edu.co), John Jairo Serra
 ## Resumen
 
 Entrenamos un agente Deep Q-Network que aprende a jugar Pong (`ALE/Pong-v5`) viendo solo
-la pantalla, con el preprocesamiento y la red convolucional de Mnih et al. (2015). Tras
-1.000.000 de pasos de entrenamiento (unas dos horas en una GPU T4), el mejor modelo gana
-los 30 partidos de la evaluación final **21 a 0**, frente a −20,27 de un agente aleatorio.
-Con acciones pegajosas, que rompen el determinismo del emulador, sigue ganando los 30
-partidos pero con **+10,5** de media: buena parte de su puntuación perfecta viene de una
-jugada repetible que anota cada 78 pasos y que depende de que el emulador sea
+la pantalla, con el preprocesamiento y la red convolucional de Mnih et al. (2015). Hicimos
+dos corridas independientes de 1.000.000 de pasos (semillas 0 y 1). En las dos, el mejor
+modelo gana los 30 partidos de la evaluación final **21 a 0**, frente a −20,27 de un
+agente aleatorio. Con acciones pegajosas, que rompen el determinismo del emulador, la
+ventaja baja a **+10,5** y **+7,4**: las dos corridas descubrieron por separado la misma
+jugada repetible, que anota cada 78 pasos y que depende de que el emulador sea
 determinista. El hallazgo que más nos costó fue un colapso silencioso: con el `eps` por
 defecto de Adam en PyTorch (1e-8), la tercera convolución quedó sin ninguna unidad
 activa antes del paso 50.000 y la red devolvía el mismo valor para toda pantalla. Subirlo
 a 1,5e-4, el valor de Rainbow, lo resolvió.
-
-> La segunda corrida (semilla 0, en un Mac) sigue entrenando; sus resultados se agregan
-> a la sección 5 al terminar.
 
 ## Probarlo en Google Colab, sin instalar nada
 
@@ -50,18 +47,17 @@ control guardado en Drive. El detalle de cada comando está en la sección 9.
 
 ## 1. Por qué este ambiente
 
-El enunciado pide un ambiente no trabajado en clase. En el encuentro sincrónico del
-28 de septiembre el ejemplo de la clase fue LunarLander, con una implementación DQN
-de referencia, así que ese quedó descartado. El profesor sugirió los juegos de Atari
-para quien quisiera un reto mayor, porque obligan a trabajar con una red
-convolucional.
+El enunciado pide un ambiente de Gymnasium no trabajado previamente en el curso. Entre
+los que cumplen esa condición buscamos uno que exigiera más que los de control clásico
+y Box2D, cuyo estado es un vector de pocas variables: los juegos de Atari entregan la
+pantalla como observación y obligan a trabajar con una red convolucional.
 
-Elegimos Pong porque cumple eso y además tiene tres propiedades útiles para el taller:
+Elegimos Pong porque tiene tres propiedades útiles para el taller:
 
 - **La observación es una imagen.** Hay que decidir cómo preprocesarla, y la
   decisión de apilar cuadros deja de ser opcional (sección 2.3).
 - **El estado no es markoviano cuadro a cuadro.** Es el caso de libro para discutir
-  la propiedad de Markov, que fue justamente el ejemplo usado en clase.
+  la propiedad de Markov y por qué se apilan cuadros.
 - **Es el juego de Atari más estudiado con DQN**, así que hay una referencia clara de
   lo que significa "resuelto": ganar los partidos 21 a algo, con recompensa cercana
   a +21.
@@ -111,7 +107,7 @@ supuesto sobre el que descansa toda la ecuación de Bellman se rompe. Con cuatro
 cuadros la red puede inferir dirección y velocidad a partir del desplazamiento
 entre ellos.
 
-La comparación con LunarLander, el ambiente de la clase, lo deja claro: allí el
+La comparación con LunarLander lo deja claro: allí el
 vector de estado ya trae las velocidades como componentes explícitas, así que un solo
 paso de observación es markoviano y apilar no aporta nada. En Pong las velocidades
 no están en ningún lado excepto en la diferencia entre cuadros.
@@ -346,54 +342,69 @@ Tamaño de salida de cada convolución sin relleno: `(L − k) / s + 1`, que da
 
 ### 5.1 Curvas
 
-![Curvas de entrenamiento y evaluación: la corrida colapsada queda en −21; la corregida sube a +21](resultados/curva_colapso_adam_eps_1e-8_dqn_v2.png)
+![Curvas de entrenamiento y evaluación de las tres corridas](resultados/curva_colapso_adam_eps_1e-8_dqn_v2_dqn_v2_mac.png)
 
 Izquierda: recompensa por episodio durante el entrenamiento (con exploración), media
 móvil de 20 episodios. Derecha: evaluación cada 50.000 pasos, 10 partidos con la
 política congelada y semillas fijas. En azul, la primera corrida, con el `eps` de Adam
-por defecto (sección 7); en naranja, la corrida con la corrección (semilla 1, GPU T4).
+por defecto (sección 7). En naranja y verde, dos corridas con la corrección, idénticas
+salvo por la semilla y el equipo: semilla 1 en una GPU T4 de Colab (2,1 horas) y
+semilla 0 en un Mac con MPS (6,0 horas).
 
 ### 5.2 Evolución
 
-| pasos | evaluación (10 partidos) | ganados | lo que pasa |
-|---|---|---|---|
-| 50.000 | −20,40 ± 0,80 | 0/10 | devuelve la pelota de vez en cuando |
-| 100.000 | −17,20 ± 2,32 | 0/10 | |
-| 150.000 | −14,60 ± 4,27 | 0/10 | |
-| 200.000 | −11,80 ± 4,07 | 0/10 | |
-| 250.000 | −9,80 ± 6,79 | 0/10 | ε llega a su mínimo (0,01) |
-| 300.000 | **+18,20 ± 1,89** | **10/10** | |
-| 350.000 | +20,20 ± 0,75 | 10/10 | |
-| 400.000 a 750.000 | entre +19,40 y +20,80 | 10/10 | |
-| **800.000** | **+21,00 ± 0,00** | **10/10** | mejor modelo (el que reportamos) |
-| 1.000.000 | +21,00 ± 0,00 | 10/10 | |
+Evaluación cada 50.000 pasos (10 partidos; entre paréntesis, partidos ganados):
 
-En el entrenamiento, el primer partido ganado llegó en el episodio 182 (paso 242.663) y
-la media móvil de 20 episodios cruzó el cero en el paso 272.492. Después del paso
-400.000 el agente no perdió ninguno de sus 343 partidos de entrenamiento (media +19,97,
-mínimo +15). Los partidos pasaron de durar 917 pasos en promedio (los primeros 50) a
-1.726 (los últimos 50), porque el agente dejó de perder los puntos de inmediato.
+| pasos | semilla 1 (Colab) | semilla 0 (Mac) | lo que pasa |
+|---|---|---|---|
+| 50.000 | −20,40 (0) | −21,00 (0) | devuelve la pelota de vez en cuando |
+| 100.000 | −17,20 (0) | −18,80 (0) | |
+| 150.000 | −14,60 (0) | −14,60 (0) | |
+| 200.000 | −11,80 (0) | −7,20 (4) | |
+| 250.000 | −9,80 (0) | −9,60 (0) | ε llega a su mínimo (0,01) |
+| 300.000 | **+18,20 (10)** | −4,00 (4) | |
+| 350.000 | +20,20 (10) | +8,00 (10) | |
+| 400.000 | +20,30 (10) | +10,60 (10) | |
+| 450.000 | +19,40 (10) | **+18,40 (10)** | |
+| 500.000 a 750.000 | entre +20,00 y +20,80 (10) | entre +19,80 y +20,80 (10) | |
+| 800.000 | **+21,00 (10)**, mejor modelo | +20,40 (10) | |
+| 900.000 | +20,80 (10) | **+21,00 (10)**, mejor modelo | |
+| 1.000.000 | +21,00 (10) | +20,60 (10) | |
+
+| entrenamiento | semilla 1 (Colab) | semilla 0 (Mac) |
+|---|---|---|
+| primer partido ganado | episodio 182 (paso 242.663) | episodio 174 (paso 239.217) |
+| media móvil de 20 episodios cruza el cero | paso 272.492 | paso 355.582 |
+| partidos perdidos después del paso 400.000 | 0 de 343 | 0 de 337 |
+| duración media de los partidos, primeros 50 → últimos 50 | 917 → 1.726 pasos | 928 → 1.712 pasos |
+
+Las dos corridas ganan su primer partido casi en el mismo paso (unos 240.000), pero la
+semilla 0 tarda unos 150.000 pasos más en consolidar la política.
 
 ### 5.3 Evaluación final
 
-Mejor modelo (paso 800.000), 30 partidos con semillas fijas y ε = 0:
+Mejor modelo de cada corrida, 30 partidos con semillas fijas y ε = 0:
 
-| emulador | recompensa media | mín | máx | ganados | pasos por partido |
-|---|---|---|---|---|---|
-| determinista (`sticky` = 0) | **+21,00 ± 0,00** | +21 | +21 | **30/30** | 1.658 |
-| acciones pegajosas (`sticky` = 0,25) | **+10,50 ± 3,66** | +4 | +17 | **30/30** | 2.569 |
-| agente aleatorio | −20,27 ± 0,85 | −21 | −18 | 0/30 | 948 |
+| corrida | emulador | recompensa media | mín | máx | ganados | pasos por partido |
+|---|---|---|---|---|---|---|
+| semilla 1 (paso 800.000) | determinista | **+21,00 ± 0,00** | +21 | +21 | **30/30** | 1.658 |
+| semilla 0 (paso 900.000) | determinista | **+21,00 ± 0,00** | +21 | +21 | **30/30** | 1.646 |
+| semilla 1 | acciones pegajosas (0,25) | **+10,50 ± 3,66** | +4 | +17 | **30/30** | 2.569 |
+| semilla 0 | acciones pegajosas (0,25) | **+7,40 ± 4,62** | −3 | +15 | **28/30** | 2.868 |
+| agente aleatorio | determinista | −20,27 ± 0,85 | −21 | −18 | 0/30 | 948 |
 
-Los registros completos están en `resultados/dqn_v2/` (`episodios.csv`,
-`evaluaciones.csv`, `final_sticky0.json`, `final_sticky025.json`) y el modelo en
-`saves/dqn_v2/mejor.pt`.
+Los registros completos están en `resultados/dqn_v2/` (semilla 1) y
+`resultados/dqn_v2_mac/` (semilla 0): `episodios.csv`, `evaluaciones.csv`,
+`final_sticky0.json` y `final_sticky025.json`. Los modelos, en `saves/dqn_v2/mejor.pt` y
+`saves/dqn_v2_mac/mejor.pt`.
 
 ### 5.4 Salud de la red
 
 | corrida | unidades de conv3 activas | variación de Q entre pantallas | resultado |
 |---|---|---|---|
 | `eps` = 1e-8 | 0 de 3.136 (0 %) desde antes del paso 50.000 | 0 (salida constante) | −21 en las 20 evaluaciones |
-| `eps` = 1,5e-4 | entre 88 % y 97 % en toda la corrida | entre 0,30 y 0,48 | +21 |
+| `eps` = 1,5e-4, semilla 1 | entre 88 % y 97 % en toda la corrida | entre 0,30 y 0,48 | +21 |
+| `eps` = 1,5e-4, semilla 0 | entre 88 % y 96 % en toda la corrida | entre 0,34 y 0,44 | +21 |
 
 ---
 
@@ -414,12 +425,23 @@ la mejora es muy rápida.
 determinista el agente gana cada partido 21 a 0, y anota exactamente cada 78 pasos (lo
 medimos en un partido completo: 77 o 78 pasos entre un punto y el siguiente, los 21
 puntos). Encontró una jugada que, devuelta desde el mismo lugar, el rival no alcanza
-nunca. Eso es legítimo dentro de las reglas, pero depende de que el emulador repita
-exactamente lo mismo. Con acciones pegajosas la misma red baja a +10,5 y sus partidos
-duran 2.569 pasos en vez de 1.658: ya no puede encadenar la jugada y tiene que defender
-de verdad. Sigue ganando los 30, así que aprendió a jugar, pero cerca de la mitad de su
-margen venía de explotar el determinismo. Es exactamente la crítica de Machado et al.
+nunca. Lo llamativo es que **la otra corrida, con otra semilla y en otro equipo,
+encontró exactamente el mismo ritmo de 78 pasos**: no es un accidente de una red, es una
+debilidad del rival que el método encuentra de forma sistemática. Eso es legítimo dentro
+de las reglas, pero depende de que el emulador repita exactamente lo mismo. Con acciones
+pegajosas las mismas redes bajan a +10,5 y +7,4, y sus partidos pasan de unos 1.650
+pasos a 2.569 y 2.868: ya no pueden encadenar la jugada y tienen que defender de verdad.
+La semilla 0 incluso pierde 2 de los 30 partidos. Aprendieron a jugar, pero buena parte
+del margen venía de explotar el determinismo. Es exactamente la crítica de Machado et al.
 (2018) a la evaluación de agentes en Atari sin estocasticidad.
+
+**Dos corridas, el mismo destino por caminos distintos.** Las dos semillas ganan su
+primer partido de entrenamiento casi en el mismo paso (239.217 y 242.663), y las dos
+terminan en +21. Pero la semilla 1 pasó de −9,8 a +18,2 entre los pasos 250.000 y
+300.000, mientras que la semilla 0 necesitó hasta el paso 450.000 para llegar a +18,4.
+Con una sola corrida habríamos reportado "Pong se resuelve en 300.000 pasos" o "en
+450.000" según la semilla que nos hubiera tocado; con dos, lo honesto es decir que se
+resuelve entre 300.000 y 450.000 pasos con esta configuración.
 
 **Las acciones redundantes quedaron con valores parecidos.** En un partido completo, la
 diferencia media de Q entre acciones con el mismo efecto (NOOP y FIRE, RIGHT y
@@ -427,9 +449,10 @@ RIGHTFIRE, LEFT y LEFTFIRE) fue de 0,013 a 0,016, frente a 0,046 a 0,059 entre a
 con efectos distintos. La red descubrió sola que FIRE no hace nada en Pong. Como las
 diferencias son pequeñas, el agente alterna entre acciones equivalentes y usa las seis.
 
-**La red sobreestima sus propios valores en un 20 %.** En cinco partidos de evaluación,
-el Q medio de las acciones elegidas fue 1,48, mientras que el retorno descontado que el
-agente obtuvo realmente desde esos mismos estados fue 1,23. Es el sesgo optimista del
+**Las redes sobreestiman sus propios valores en un 17 % a 20 %.** En cinco partidos de
+evaluación, el Q medio de las acciones elegidas fue 1,48 (semilla 1) y 1,42 (semilla 0),
+mientras que el retorno descontado que el agente obtuvo realmente desde esos mismos
+estados fue 1,23 y 1,22. Es el sesgo optimista del
 `max` en el objetivo de Bellman que describen van Hasselt et al. (2016) y que Double DQN
 corrige. Aquí no impidió resolver el juego, porque lo que importa para actuar es el
 orden entre acciones y no su valor absoluto, pero sí muestra que los valores Q de DQN no
@@ -463,11 +486,10 @@ dentro de la red. Desde entonces cada evaluación imprime cuántas unidades sigu
 y avisa si la red colapsa; los registros de aquella corrida están en
 `resultados/colapso_adam_eps_1e-8/`.
 
-**Cambiar de ambiente a mitad del taller.** El trabajo empezó en LunarLander. En la
-clase del 28 de septiembre ese mismo ambiente fue el ejemplo resuelto en vivo, lo
-que lo sacaba del requisito de "ambiente no trabajado en clase". Lo aprendido allí
-(sección 8) lo trasladamos, pero la red, el preprocesamiento y el buffer tuvimos que
-hacerlos de nuevo.
+**Cambiar de ambiente a mitad del taller.** El trabajo empezó en LunarLander, pero ese
+ambiente ya se había trabajado en el curso y no cumplía el requisito del enunciado. Lo
+aprendido allí (sección 8) lo trasladamos, pero la red, el preprocesamiento y el buffer
+tuvimos que hacerlos de nuevo.
 
 **Diseñar el buffer por cuadros sin equivocarse.** Es la parte del código con más
 formas de fallar en silencio. Un error de índices no lanza excepciones: produce
@@ -477,7 +499,7 @@ defensa fue una prueba que reconstruye cientos de pilas y las compara, píxel a 
 con las que entregó el entorno.
 
 **El cómputo, y no por la razón esperada.** Sin GPU propia, un millón de pasos toma
-unas cinco horas en un Mac y dos en una T4 de Colab. El costo real no fue esperar, fue
+unas seis horas en un Mac y dos en una T4 de Colab. El costo real no fue esperar, fue
 que el colapso solo se notó al final de esas horas. Por eso agregamos el diagnóstico de
 salud a cada evaluación: hoy el mismo error se vería en el paso 50.000.
 
@@ -520,7 +542,7 @@ caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn_v2 --semil
 # Evaluación final y gráficas
 uv run pong-dqn evaluar --modelo saves/dqn_v2/mejor.pt --n 30
 uv run pong-dqn evaluar --modelo saves/dqn_v2/mejor.pt --n 30 --sticky 0.25
-uv run python scripts/graficar.py colapso_adam_eps_1e-8 dqn_v2
+uv run python scripts/graficar.py colapso_adam_eps_1e-8 dqn_v2 dqn_v2_mac
 uv run python scripts/grabar_gif.py --modelo saves/dqn_v2/mejor.pt
 ```
 
@@ -551,7 +573,7 @@ Como equipo, utilizamos asistentes de IA como apoyo para la estructuración y pr
 
 ## 12. Licencia
 
-Apache 2.0 (ver `LICENSE`), igual que el Taller 1.
+Apache 2.0 (ver `LICENSE`)
 
 ## Referencias
 
