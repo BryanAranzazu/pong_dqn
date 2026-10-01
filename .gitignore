@@ -7,3 +7,6 @@ __pycache__/
 # Los pesos intermedios pesan ~20 MB cada uno; solo se versiona el mejor modelo.
 saves/**/ultimo.pt
 saves/**/paso_*.pt
+
+# Pesos de la corrida colapsada: solo se versionan sus registros.
+saves/colapso_*/
