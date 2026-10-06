@@ -45,7 +45,7 @@ def cmd_entrenar(a) -> None:
     hp = Hiper(doble=a.doble, aprender_cada=a.aprender_cada, lr=a.lr, eps_pasos=a.eps_pasos,
                capacidad=a.capacidad, adam_eps=a.adam_eps)
     entrenar(a.pasos, etiqueta=a.etiqueta, hp=hp, dispositivo=a.dispositivo, semilla=a.semilla,
-             eval_cada=a.eval_cada, n_eval=a.n_eval, reanudar=a.reanudar)
+             eval_cada=a.eval_cada, n_eval=a.n_eval, reanudar=a.reanudar, sticky=a.sticky)
 
 
 def cmd_evaluar(a) -> None:
@@ -118,6 +118,8 @@ def main() -> None:
     e.add_argument("--semilla", type=int, default=0)
     e.add_argument("--dispositivo", default="auto")
     e.add_argument("--reanudar", action="store_true")
+    e.add_argument("--sticky", type=float, default=0.0,
+                   help="acciones pegajosas al entrenar (0.25 = Machado et al., 2018)")
 
     v = sub.add_parser("evaluar", help="evalua un modelo guardado")
     v.add_argument("--modelo", default="saves/dqn/mejor.pt")

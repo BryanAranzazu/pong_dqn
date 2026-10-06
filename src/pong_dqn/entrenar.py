@@ -46,6 +46,7 @@ def entrenar(
     guardar_cada: int = 50_000,
     reanudar: bool = False,
     raiz: Path = Path("."),
+    sticky: float = 0.0,
 ) -> AgenteDQN:
     random.seed(semilla)
     np.random.seed(semilla)
@@ -56,7 +57,9 @@ def entrenar(
     dir_res.mkdir(parents=True, exist_ok=True)
     dir_saves.mkdir(parents=True, exist_ok=True)
 
-    env = crear_entorno(sticky=0.0)
+    # sticky = 0.0 reproduce el DQN original; 0.25 es el protocolo de Machado et al. (2018),
+    # que impide explotar el determinismo del emulador. La evaluacion periodica usa el mismo valor.
+    env = crear_entorno(sticky=sticky)
     n_acc = int(env.action_space.n)
 
     ultimo = dir_saves / "ultimo.pt"
@@ -147,7 +150,7 @@ def entrenar(
 
             if agente.pasos % eval_cada == 0:
                 te = time.time()
-                m = evaluar(agente, n_eval)
+                m = evaluar(agente, n_eval, sticky=sticky)
                 seg = time.time() - te
                 sal = agente.salud(estados_diag)
                 w_ev.writerow([agente.pasos, agente.episodios, m["media"], round(m["desv"], 3),
