@@ -1,5 +1,15 @@
 # Registro de cambios
 
+## Aporte de Leonar Socarrás Molina (rama `aporte-leonar-robustez`)
+
+- Curva de robustez de los dos mejores modelos frente a acciones pegajosas (0 a 0,5; 30
+  partidos por nivel), con intervalos bootstrap y comparación entre semillas
+  (`scripts/robustez.py`, `resultados/robustez_sticky/`, sección 5.5 del README).
+- Opción `--sticky` en `pong-dqn entrenar` para entrenar con el protocolo de Machado et al.
+  (2018); la evaluación periódica usa el mismo valor. Prueba nueva `tests/test_entorno.py`.
+- Referencias: se citan en el texto Mnih et al. (2013) y Towers et al. (2024), que estaban
+  en la lista sin cita, y se corrige el orden alfabético (Machado).
+
 ## Sin publicar
 
 Taller 2, Unidad 3.

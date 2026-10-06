@@ -58,7 +58,7 @@ Elegimos Pong porque tiene tres propiedades útiles para el taller:
   decisión de apilar cuadros deja de ser opcional (sección 2.3).
 - **El estado no es markoviano cuadro a cuadro.** Es el caso de libro para discutir
   la propiedad de Markov y por qué se apilan cuadros.
-- **Es el juego de Atari más estudiado con DQN**, así que hay una referencia clara de
+- **Es el juego de Atari más estudiado con DQN** (Mnih et al., 2013, 2015), así que hay una referencia clara de
   lo que significa "resuelto": ganar los partidos 21 a algo, con recompensa cercana
   a +21.
 
@@ -66,7 +66,7 @@ Elegimos Pong porque tiene tres propiedades útiles para el taller:
 
 ## 2. Acciones y observaciones
 
-Todo lo que sigue lo obtuvimos del propio entorno con `pong-dqn inspeccionar`.
+Todo lo que sigue lo obtuvimos del propio entorno con `pong-dqn inspeccionar`, sobre la interfaz de Gymnasium (Towers et al., 2024).
 
 ### 2.1 Observación del emulador (antes del preprocesamiento)
 
@@ -406,6 +406,41 @@ Los registros completos están en `resultados/dqn_v2/` (semilla 1) y
 | `eps` = 1,5e-4, semilla 1 | entre 88 % y 97 % en toda la corrida | entre 0,30 y 0,48 | +21 |
 | `eps` = 1,5e-4, semilla 0 | entre 88 % y 96 % en toda la corrida | entre 0,34 y 0,44 | +21 |
 
+### 5.5 Robustez frente a la estocasticidad del emulador
+
+Para medir cuánto del +21 depende del determinismo, evaluamos los dos mejores modelos con
+siete niveles de acciones pegajosas, 30 partidos por nivel y las mismas semillas de la
+evaluación final. Los valores de 0 y 0,25 coinciden con los de la sección 5.3.
+
+![Recompensa media frente a la probabilidad de acción pegajosa, con intervalo bootstrap del 95 %](resultados/robustez_sticky/curva_robustez.png)
+
+| acción pegajosa | semilla 1 (Colab) | ganados | semilla 0 (Mac) | ganados |
+|---|---|---|---|---|
+| 0,00 | +21,00 [21,00; 21,00] | 30/30 | +21,00 [21,00; 21,00] | 30/30 |
+| 0,05 | +18,87 [18,27; 19,37] | 30/30 | +18,63 [18,07; 19,17] | 30/30 |
+| 0,10 | +16,97 [16,07; 17,73] | 30/30 | +16,60 [15,83; 17,33] | 30/30 |
+| 0,15 | +15,60 [14,70; 16,47] | 30/30 | +14,07 [13,07; 15,00] | 30/30 |
+| 0,25 | +10,50 [9,23; 11,80] | 30/30 | +7,40 [5,73; 9,00] | 28/30 |
+| 0,35 | +4,53 [2,30; 6,50] | 24/30 | +3,43 [1,83; 5,13] | 23/30 |
+| 0,50 | −5,97 [−7,40; −4,50] | 3/30 | −5,37 [−7,47; −3,10] | 5/30 |
+
+Entre corchetes, intervalo bootstrap del 95 % de la media (10.000 remuestreos). La
+degradación es progresiva y se acelera: cada 0,05 de probabilidad de repetir la acción
+anterior cuesta entre 1,5 y 2 puntos por partido por debajo de 0,15, y entre 2,5 y 3,5
+por encima. Ninguno de los dos modelos pierde un partido hasta 0,15, y
+el saldo cruza el cero alrededor de 0,4. Con la mitad de las acciones ignoradas los dos
+pierden casi todos los partidos, aunque siguen muy por encima del agente aleatorio
+(−20,27), lo que indica que conservan una política de defensa útil.
+
+Las dos semillas son indistinguibles en los extremos y se separan en la zona intermedia:
+la probabilidad de que un partido de la semilla 1 supere a uno de la semilla 0 es 0,67 con
+0,15 (U de Mann-Whitney, p = 0,020) y 0,69 con 0,25 (p = 0,011). Esos valores no
+sobreviven a la corrección de Holm por las seis comparaciones (p ajustado de 0,065 para
+0,25), así que la diferencia entre semillas debe leerse como un indicio que falta confirmar
+con más semillas.
+`uv run python scripts/robustez.py dqn_v2 dqn_v2_mac` regenera la tabla
+(`resultados/robustez_sticky/resumen.csv`) y la figura.
+
 ---
 
 ## 6. Reflexión sobre los resultados
@@ -433,7 +468,10 @@ pegajosas las mismas redes bajan a +10,5 y +7,4, y sus partidos pasan de unos 1.
 pasos a 2.569 y 2.868: ya no pueden encadenar la jugada y tienen que defender de verdad.
 La semilla 0 incluso pierde 2 de los 30 partidos. Aprendieron a jugar, pero buena parte
 del margen venía de explotar el determinismo. Es exactamente la crítica de Machado et al.
-(2018) a la evaluación de agentes en Atari sin estocasticidad.
+(2018) a la evaluación de agentes en Atari sin estocasticidad. La curva de la sección 5.5 muestra que esa dependencia es gradual: el margen se
+erosiona a medida que crece la estocasticidad, sin un punto de quiebre. Entrenar con
+`--sticky 0.25` permitiría comprobar si el agente aprende entonces a defender en lugar de
+explotar la jugada repetible.
 
 **Dos corridas, el mismo destino por caminos distintos.** Las dos semillas ganan su
 primer partido de entrenamiento casi en el mismo paso (239.217 y 242.663), y las dos
@@ -532,7 +570,7 @@ política congelada, y la evaluación final usa 30 partidos.
 uv sync
 uv run pong-dqn inspeccionar     # espacios, dtype, recompensas y resumen de la red
 uv run pong-dqn benchmark        # estima cuánto tardará el entrenamiento en esta máquina
-uv run pytest -q                 # 8 pruebas, incluida la del buffer
+uv run pytest -q                 # 10 pruebas, incluidas la del buffer y la del entorno
 
 # Entrenamiento (en macOS, caffeinate evita que el equipo se duerma)
 caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn_v2 --semilla 1
@@ -544,6 +582,16 @@ uv run pong-dqn evaluar --modelo saves/dqn_v2/mejor.pt --n 30
 uv run pong-dqn evaluar --modelo saves/dqn_v2/mejor.pt --n 30 --sticky 0.25
 uv run python scripts/graficar.py colapso_adam_eps_1e-8 dqn_v2 dqn_v2_mac
 uv run python scripts/grabar_gif.py --modelo saves/dqn_v2/mejor.pt
+
+# Curva de robustez (sección 5.5): evaluar con varios niveles de acciones pegajosas
+for s in 0.05 0.10 0.15 0.35 0.50; do
+  uv run pong-dqn evaluar --modelo saves/dqn_v2/mejor.pt --n 30 --sticky $s \
+    --salida resultados/robustez_sticky/dqn_v2_sticky$s.json
+done
+uv run python scripts/robustez.py dqn_v2 dqn_v2_mac
+
+# Entrenar con acciones pegajosas (protocolo de Machado et al., 2018)
+caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn_sticky --semilla 1 --sticky 0.25
 ```
 
 En Google Colab con GPU: [`notebooks/entrenar_colab.ipynb`](https://colab.research.google.com/github/glizano/pong_dqn/blob/main/notebooks/entrenar_colab.ipynb) (ver "Probarlo en
@@ -561,7 +609,8 @@ src/pong_dqn/evaluar.py   evaluación con política congelada y semillas fijas
 src/pong_dqn/cli.py       pong-dqn inspeccionar | entrenar | evaluar | benchmark
 scripts/graficar.py       curva de entrenamiento y evaluaciones
 scripts/grabar_gif.py     GIF de una partida junto a lo que ve la red
-tests/                    buffer, red y agente
+scripts/robustez.py       curva de robustez frente a acciones pegajosas
+tests/                    buffer, red, agente y entorno
 notebooks/                entrenamiento en Google Colab
 resultados/               registros, evaluaciones finales, curvas y GIF
 saves/                    mejor modelo de cada corrida
@@ -577,15 +626,15 @@ Apache 2.0 (ver `LICENSE`)
 
 ## Referencias
 
-- Machado, M. C., Bellemare, M. G., Talvitie, E., Veness, J., Hausknecht, M., y
-  Bowling, M. (2018). Revisiting the Arcade Learning Environment: Evaluation
-  protocols and open problems for general agents. *Journal of Artificial Intelligence
-  Research, 61*, 523-562. https://doi.org/10.1613/jair.5699
 - Hessel, M., Modayil, J., van Hasselt, H., Schaul, T., Ostrovski, G., Dabney, W.,
   Horgan, D., Piot, B., Azar, M., y Silver, D. (2018). Rainbow: Combining improvements in
   deep reinforcement learning. *Proceedings of the AAAI Conference on Artificial
   Intelligence, 32*(1), 3215-3222. https://doi.org/10.1609/aaai.v32i1.11796
 - Lapan, M. (2020). *Deep reinforcement learning hands-on* (2.ª ed.). Packt.
+- Machado, M. C., Bellemare, M. G., Talvitie, E., Veness, J., Hausknecht, M., y
+  Bowling, M. (2018). Revisiting the Arcade Learning Environment: Evaluation
+  protocols and open problems for general agents. *Journal of Artificial Intelligence
+  Research, 61*, 523-562. https://doi.org/10.1613/jair.5699
 - Mnih, V., Kavukcuoglu, K., Silver, D., Graves, A., Antonoglou, I., Wierstra, D., y
   Riedmiller, M. (2013). *Playing Atari with deep reinforcement learning* [Preprint].
   arXiv. https://doi.org/10.48550/arXiv.1312.5602
