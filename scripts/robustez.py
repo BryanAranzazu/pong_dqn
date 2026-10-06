@@ -73,10 +73,28 @@ def main(corridas: list[str]) -> None:
     if len(corridas) == 2:
         a, b = corridas
         print(f"\nComparación {a} frente a {b} por nivel de estocasticidad")
+        comparaciones = []
         for s in sorted(set(datos[a]) & set(datos[b])):
-            u, p = mann_whitney(datos[a][s], datos[b][s])
-            pm = u / (len(datos[a][s]) * len(datos[b][s]))
-            print(f"  sticky {s:.2f}: P({a} > {b}) = {pm:.2f}, U = {u:.0f}, p = {p:.4f}")
+            x, y = datos[a][s], datos[b][s]
+            # Excluir el nivel determinista degenerado de la familia de contrastes.
+            if np.all(x == x[0]) and np.all(y == x[0]):
+                continue
+            u, p = mann_whitney(x, y)
+            comparaciones.append({"sticky": s, "U": u, "p": p,
+                                  "probabilidad_mejora": u / (len(x) * len(y))})
+        orden = sorted(range(len(comparaciones)), key=lambda i: comparaciones[i]["p"])
+        acumulado = 0.0
+        for rango, i in enumerate(orden):
+            acumulado = max(acumulado, (len(orden) - rango) * comparaciones[i]["p"])
+            comparaciones[i]["p_holm"] = min(1.0, acumulado)
+        if comparaciones:
+            with (SALIDA / "comparacion_semillas.csv").open("w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=list(comparaciones[0]))
+                w.writeheader()
+                w.writerows(comparaciones)
+        for fila in comparaciones:
+            print(fila)
+        print("Probabilidad de mejora = P(X > Y) + 0.5 * P(X = Y).")
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     for c, por_nivel in datos.items():
