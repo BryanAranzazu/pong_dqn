@@ -20,6 +20,8 @@
 - Hallazgo nuevo en la sección 6: con acciones pegajosas el Q esperado casi no cambia
   pero el retorno real cae a 0,40 y 0,18; la red conserva los valores del emulador
   determinista.
+- Documento del aporte en `docs/Aporte_pong_dqn_AnalisisQ.pdf` (método, resultados,
+  discusión y referencias en APA)
 
 ## Sin publicar
 
