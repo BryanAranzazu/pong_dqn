@@ -1,0 +1,34 @@
+{
+  "modelo": "saves/dqn_v2/mejor.pt",
+  "pasos_entrenados": 800000,
+  "partidos": 5,
+  "sticky": 0.0,
+  "gamma": 0.99,
+  "recompensa_media": 21.0,
+  "ritmo_anotacion": {
+    "intervalo_medio": 77.87,
+    "intervalo_min": 77,
+    "intervalo_max": 78,
+    "intervalos_mas_frecuentes": {
+      "78": 87,
+      "77": 13
+    }
+  },
+  "acciones_redundantes": {
+    "dif_q_mismo_efecto": 0.014854757851401574,
+    "dif_q_efecto_distinto": 0.04275350532574866,
+    "uso_de_cada_accion": [
+      471,
+      1673,
+      1673,
+      1495,
+      853,
+      2057
+    ]
+  },
+  "sobreestimacion": {
+    "q_medio_accion_elegida": 1.4796384930958628,
+    "retorno_descontado_medio": 1.2302429013829994,
+    "sobreestimacion_relativa": 0.2027206102408727
+  }
+}

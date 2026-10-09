@@ -496,6 +496,19 @@ corrige. Aquí no impidió resolver el juego, porque lo que importa para actuar 
 orden entre acciones y no su valor absoluto, pero sí muestra que los valores Q de DQN no
 se pueden leer como predicciones calibradas.
 
+**Con acciones pegajosas, los valores Q siguen creyendo en el mundo determinista.**
+`scripts/analisis_q.py` reproduce las tres mediciones anteriores (ritmo de anotación,
+acciones redundantes y sobreestimación) y permite repetirlas con estocasticidad. Con
+`--sticky 0.25`, en los mismos cinco partidos, el Q medio de las acciones elegidas casi no
+cambia (1,36 en la semilla 1 y 1,28 en la semilla 0, frente a 1,48 y 1,42 sin acciones
+pegajosas), pero el retorno descontado que el agente obtiene realmente cae a 0,40 y 0,18.
+La brecha entre lo que la red espera y lo que consigue pasa de 0,25 y 0,20 a 0,96 y 1,10.
+La red nunca vio una acción ignorada durante el entrenamiento, así que sus valores
+describen un emulador que ya no existe: es el mismo fenómeno de la sección 5.5 visto desde
+dentro de la red, no solo desde el marcador. El ritmo de anotación lo confirma: el
+intervalo entre puntos a favor deja de ser 77 o 78 pasos y pasa a una media de 123 y 142,
+con máximos de 380 y 505.
+
 **La limitación estructural es que el agente no ve la puntuación como estado.** El
 marcador está en la pantalla, pero la recompensa por punto es la misma con 0 a 0 que con
 20 a 0 y γ = 0,99 descuenta todo lo que pase a más de unos cientos de pasos. El agente
@@ -590,6 +603,13 @@ for s in 0.05 0.10 0.15 0.35 0.50; do
 done
 uv run python scripts/robustez.py dqn_v2 dqn_v2_mac
 
+# Análisis de los valores Q (sección 6): ritmo de anotación, acciones redundantes,
+# sobreestimación; con y sin acciones pegajosas
+for m in dqn_v2 dqn_v2_mac; do
+  uv run python scripts/analisis_q.py --modelo saves/$m/mejor.pt --etiqueta $m
+  uv run python scripts/analisis_q.py --modelo saves/$m/mejor.pt --etiqueta $m --sticky 0.25
+done
+
 # Entrenar con acciones pegajosas (protocolo de Machado et al., 2018)
 caffeinate -i uv run pong-dqn entrenar --pasos 1000000 --etiqueta dqn_sticky --semilla 1 --sticky 0.25
 ```
@@ -610,6 +630,7 @@ src/pong_dqn/cli.py       pong-dqn inspeccionar | entrenar | evaluar | benchmark
 scripts/graficar.py       curva de entrenamiento y evaluaciones
 scripts/grabar_gif.py     GIF de una partida junto a lo que ve la red
 scripts/robustez.py       curva de robustez frente a acciones pegajosas
+scripts/analisis_q.py     valores Q: ritmo de anotación, acciones redundantes, sobreestimación
 tests/                    buffer, red, agente y entorno
 notebooks/                entrenamiento en Google Colab
 resultados/               registros, evaluaciones finales, curvas y GIF

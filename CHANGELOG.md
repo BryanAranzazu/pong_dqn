@@ -10,6 +10,17 @@
 - Referencias: se citan en el texto Mnih et al. (2013) y Towers et al. (2024), que estaban
   en la lista sin cita, y se corrige el orden alfabético (Machado).
 
+## Aporte de Bryan Johann Aranzazu Medina (rama `aporte-bryan-analisis-q`)
+
+- `scripts/analisis_q.py`: reproduce con código las mediciones de la sección 6 que no
+  tenían script (ritmo de anotación de 77-78 pasos, diferencia de Q entre acciones
+  redundantes y sobreestimación de Q frente al retorno descontado real).
+- Resultados en `resultados/analisis_q/` para los dos mejores modelos, con y sin acciones
+  pegajosas (0,25).
+- Hallazgo nuevo en la sección 6: con acciones pegajosas el Q esperado casi no cambia
+  pero el retorno real cae a 0,40 y 0,18; la red conserva los valores del emulador
+  determinista.
+
 ## Sin publicar
 
 Taller 2, Unidad 3.
