@@ -502,7 +502,7 @@ acciones redundantes y sobreestimación) y permite repetirlas con estocasticidad
 `--sticky 0.25`, en los mismos cinco partidos, el Q medio de las acciones elegidas casi no
 cambia (1,36 en la semilla 1 y 1,28 en la semilla 0, frente a 1,48 y 1,42 sin acciones
 pegajosas), pero el retorno descontado que el agente obtiene realmente cae a 0,40 y 0,18.
-La brecha entre lo que la red espera y lo que consigue pasa de 0,25 y 0,20 a 0,96 y 1,10.
+La brecha entre lo que la red espera y lo que consigue pasa de 0,25 y 0,20 a 0,97 y 1,10.
 La red nunca vio una acción ignorada durante el entrenamiento, así que sus valores
 describen un emulador que ya no existe: es el mismo fenómeno de la sección 5.5 visto desde
 dentro de la red, no solo desde el marcador. El ritmo de anotación lo confirma: el
